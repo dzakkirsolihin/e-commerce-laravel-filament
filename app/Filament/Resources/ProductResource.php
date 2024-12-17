@@ -19,11 +19,15 @@ use Filament\Forms\Set;
 use Illuminate\Support\Str;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ImageColumn;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Repeater;
+use Filament\Tables\Filters\SelectFilter;
+
 class ProductResource extends Resource
 {
     protected static ?string $model = Product::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-shopping-bag';
     // protected static ?string $label = 'Produk';
 
     public static function form(Form $form): Form
@@ -31,6 +35,13 @@ class ProductResource extends Resource
         return $form
             ->schema([
                 //
+                Select::make('category_id')
+                    ->relationship('category', 'name')
+                    ->required()
+                    ->label('Kategori')
+                    ->placeholder('Pilih kategori produk')
+                    ->searchable()
+                    ->preload(),
                 TextInput::make('name')
                     ->required()
                     ->maxLength(255)
@@ -42,7 +53,7 @@ class ProductResource extends Resource
                     ->required()
                     ->readOnly()
                     ->maxLength(255)
-                    ->unique()
+                    ->unique(Product::class, 'slug', ignoreRecord: true)
                     ->placeholder('Slug akan diisi otomatis setelah mengisi nama produk'),
                 TextInput::make('price')
                     ->required()
@@ -63,15 +74,33 @@ class ProductResource extends Resource
                     ->required()
                     ->integer()
                     ->label('Stok Produk')
-                    ->placeholder('Masukkan stok produk'),
-                FileUpload::make('image')
-                    ->required()
-                    ->image()
-                    ->label('Gambar Produk')
-                    ->directory('product-photos')
-                    ->imageEditor()
-                    ->imageCropAspectRatio('1:1')
-                    ->placeholder('Masukkan gambar produk'),
+                    ->placeholder('Masukkan stok produk')
+                    ->columnSpan(2),
+                
+                Repeater::make('members')
+                ->relationship('photos')
+                ->required()
+                ->label('Gambar Produk')
+                ->schema([
+                    FileUpload::make('path')
+                        ->label('Gambar Produk')
+                        ->required()
+                        ->image()
+                        ->directory('product-photos')
+                        ->disk('public')
+                        ->maxSize(1024)
+                        ->imageEditor()
+                        ->imageCropAspectRatio('1:1')
+                        ->placeholder('Masukkan gambar produk')
+                ])
+                ->columnSpanFull()
+                ->grid([
+                    'sm' => 2,
+                    'md' => 3,
+                    'lg' => 4,
+                    'xl' => 5,
+                    '2xl' => 6,
+                ]),
                 Textarea::make('description')
                     ->required()
                     ->label('Deskripsi Produk')
@@ -87,12 +116,19 @@ class ProductResource extends Resource
         return $table
             ->columns([
                 //
-                ImageColumn::make('image')
+                TextColumn::make('category.name')
+                    ->label('Kategori')
+                    ->sortable(),
+                ImageColumn::make('photos.path')
                     ->label('Gambar Produk')
+                    ->stacked()
+                    ->limit(3)
                     ->circular(),
                 TextColumn::make('name')
                     ->label('Nama Produk')
                     ->searchable()
+                    ->searchable()
+                    ->sortable()
                     ->sortable(),
                 TextColumn::make('price')
                     ->label('Harga Produk')
@@ -108,6 +144,12 @@ class ProductResource extends Resource
                     ->suffix('Pcs'),
             ])
             ->filters([
+                SelectFilter::make('category')
+                    ->relationship('category', 'name')
+                    ->label('Kategori')
+                    ->placeholder('Pilih kategori produk')
+                    ->searchable()
+                    ->preload(),
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
@@ -120,7 +162,8 @@ class ProductResource extends Resource
                     Tables\Actions\ForceDeleteBulkAction::make(),
                     Tables\Actions\RestoreBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->searchPlaceholder('Cari nama produk...');
     }
 
     public static function getRelations(): array

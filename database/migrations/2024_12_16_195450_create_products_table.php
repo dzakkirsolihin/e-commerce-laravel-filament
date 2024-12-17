@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('products', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('category_id')->constrained('categories')->cascadeOnDelete();
             $table->string('name');
             $table->string('slug')->unique();
             $table->integer('price');
@@ -21,7 +22,7 @@ return new class extends Migration
             $table->integer('weight');
             $table->integer('stock');
             $table->softDeletes();
-            $table->string('image');
+            // $table->string('image');
             // $table->string('description');
             $table->timestamps();
         });
